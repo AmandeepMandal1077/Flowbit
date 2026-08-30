@@ -17,10 +17,140 @@ enum UserActiveStatus {
   SUSPENDED
 }
 
+enum WorkflowRunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ActionStatus {
+  PENDING
+  SUCCESS
+  RUNNING
+  FAILED
+  INVALID_PAYLOAD
+  TIMED_OUT
+}
+
 model User {
-  id         String           @id @default(uuid())
-  username   String
-  status     UserActiveStatus @default(ACTIVE)
-  created_at DateTime         @default(now())
-  updated_at DateTime         @default(now())
+  id        String           @id @default(uuid())
+  username  String           @unique
+  password  String
+  status    UserActiveStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  workflows       Workflow[]
+  userCredentials UserCredential[]
+}
+
+model Workflow {
+  id           String         @id @default(uuid())
+  name         String
+  description  String?
+  userId       String
+  status       WorkflowStatus @default(DRAFT)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User           @relation(fields: [userId], references: [id])
+  workflowRuns WorkflowRun[]
+  actions      Action[]
+  triggerId    Int            @unique
+  triggers     Trigger        @relation(fields: [triggerId], references: [id])
+}
+
+model WorkflowRun {
+  id               Int               @id @default(autoincrement())
+  inputPayload     Json
+  outputPayload    Json?
+  error            Json?
+  startedAt        DateTime          @default(now())
+  completedAt      DateTime?
+  status           WorkflowRunStatus
+  workflowId       String
+  workflow         Workflow          @relation(fields: [workflowId], references: [id])
+  actionExecutions ActionExecution[]
+  outbox           outbox?
+}
+
+model Trigger {
+  id                 Int              @id @default(autoincrement())
+  availableTriggerId Int
+  type               AvailableTrigger @relation(fields: [availableTriggerId], references: [id])
+  workflows          Workflow?
+}
+
+// add constraint so no two action of same workflow have same order
+model Action {
+  id                Int               @id @default(autoincrement())
+  order             Int               @default(0)
+  configuration     Json
+  workflowId        String
+  workflow          Workflow          @relation(fields: [workflowId], references: [id])
+  availableActionId Int
+  type              AvailableAction   @relation(fields: [availableActionId], references: [id])
+  actionExecutions  ActionExecution[]
+}
+
+//each action execution unique for each workflowRun (indexing required)
+//created when previous action is completed and pushed to queue
+model ActionExecution {
+  id                Int          @id @default(autoincrement())
+  status            ActionStatus @default(PENDING)
+  inputPayload      Json
+  outputPayload     Json?
+  error             Json?
+  retryAttemptCount Int          @default(0)
+  startedAt         DateTime     @default(now())
+  lastAttemptedAt   DateTime     @default(now())
+  completedAt       DateTime?
+  actionId          Int
+  action            Action       @relation(fields: [actionId], references: [id])
+  workflowRunId     Int
+  workflowRun       WorkflowRun  @relation(fields: [workflowRunId], references: [id])
+}
+
+model AvailableAction {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  metadata    Json
+  actions     Action[]
+}
+
+model AvailableTrigger {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  metadata    Json
+  triggers    Trigger[]
+}
+
+//outbox -> kafka -> delete rows
+model outbox {
+  id                Int         @id @default(autoincrement())
+  retryAttemptCount Int         @default(0)
+  idempotentKey     String
+  actionStep        Int
+  payload           Json
+  workflowRunId     Int         @unique
+  workflowRuns      WorkflowRun @relation(fields: [workflowRunId], references: [id])
+  availableAt       DateTime    @default(now()) //cooldown for retry
+}
+
+model UserCredential {
+  id            String   @id @default(uuid())
+  name          String
+  encryptedData Bytes
+  createdAt     DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
 }

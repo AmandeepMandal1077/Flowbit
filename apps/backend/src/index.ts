@@ -1,16 +1,7 @@
-import prisma from "@flowbit/db"
-import express from "express"
+import app from "./app.js";
 
-const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.get("/api/v1/health", async (req, res) => {
-    res.status(200).json({
-        message: {
-            "health": "ok"
-        }
-    })
-})
-
-app.listen(3000, () => {
-    console.log("Server listening on port 3000");
+app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
 });

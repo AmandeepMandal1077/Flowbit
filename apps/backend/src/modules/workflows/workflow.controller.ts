@@ -1,16 +1,20 @@
 import type { Request, Response } from "express";
-import { createWorkflowSchema, updateWorkflowSchema } from "./workflow.validations.js";
+import { createWorkflowSchema, receiveWebhookSchema, updateWorkflowSchema } from "./workflow.validations.js";
 import { AppError } from "../../shared/utils/appError.js";
 import { zodErrorMessage } from "../../shared/utils/zodErrorMessage.js";
-import prisma from "@flowbit/db";
+import prisma, { WorkflowStatus } from "@flowbit/db";
+import { validateConfigFields, type Config } from "../../shared/utils/validateConfig.js";
+import { createWorkflowRun, type createWorkflowRunPayload } from "./workflow.service.js";
 
 const createWorkflow = async (req: Request, res: Response) => {
+
     const { data, success, error } = createWorkflowSchema.safeParse(req.body);
     if (!success) {
         throw new AppError(zodErrorMessage(error), 400);
     }
 
     const { name, availableTriggerId, description } = data;
+
     const userId = req.userId!;
 
     const availableTrigger = await prisma.availableTrigger.findUnique({
@@ -130,11 +134,12 @@ const updateWorkflow = async (req: Request, res: Response) => {
     }
 
     const { data, success, error } = updateWorkflowSchema.safeParse(req.body);
+
     if (!success) {
         throw new AppError(zodErrorMessage(error), 400);
     }
 
-    const { name, description, availableTriggerId } = data;
+    const { name, description, availableTriggerId, status } = data;
 
     const existingWorkflow = await prisma.workflow.findFirst({
         where: {
@@ -157,13 +162,14 @@ const updateWorkflow = async (req: Request, res: Response) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-        const updateData: { name?: string; description?: string | null } = {};
+        const updateData: { name?: string; description?: string | null; status?: WorkflowStatus; } = {};
         if (name !== undefined) updateData.name = name;
         if (description !== undefined) updateData.description = description || null;
+        if (status !== undefined) updateData.status = status;
 
         const updatedWorkflow = await tx.workflow.update({
             where: { id },
-            data: updateData
+            data: updateData,
         });
 
         let updatedTrigger = null;
@@ -215,11 +221,67 @@ const deleteWorkflow = async (req: Request, res: Response) => {
     });
 };
 
+const receiveWebhook = async (req: Request, res: Response) => {
+    const workflowId = req.params.workflowId as string;
+
+    const { data, success, error } = receiveWebhookSchema.safeParse(req.body);
+
+    if (!success) {
+        throw new AppError(zodErrorMessage(error), 400);
+    }
+
+    const { inputPayload } = data;
+
+    const workflow = await prisma.workflow.findUnique({
+        where: {
+            id: workflowId
+        },
+        include: {
+            actions: {
+                include: {
+                    type: true,
+                },
+                orderBy: { order: "asc" }
+            }
+        }
+    });
+
+    if (!workflow) {
+        throw new AppError("Workflow not found", 404);
+    }
+
+    if (workflow.status !== WorkflowStatus.ACTIVE) {
+        throw new AppError("Workflow is not active", 400);
+    }
+
+    const actionConfigMetadata = workflow.actions[0]?.type.metadata as Config;
+
+    const isValidConfig = validateConfigFields(actionConfigMetadata, inputPayload);
+    if (!isValidConfig) {
+        throw new AppError("Config is incomplete or missing required fields", 400);
+    }
+
+    const firstActionId = workflow.actions[0]?.id || -1;
+
+    const payload: createWorkflowRunPayload = {
+        actionId: firstActionId,
+        inputPayload: inputPayload
+    };
+
+    await createWorkflowRun(workflowId, payload);
+
+    res.status(201).json({
+        success: true,
+        message: "Workflow run created successfully",
+    });
+};
+
 export {
     createWorkflow,
     getWorkflow,
     listWorkflows,
     updateWorkflow,
     deleteWorkflow,
+    receiveWebhook,
 };
 

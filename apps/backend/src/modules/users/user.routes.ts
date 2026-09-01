@@ -12,7 +12,7 @@ router
     .patch(verifyJWTToken, validate(updateUserSchema), updateUser)
     .delete(verifyJWTToken, deleteUser);
 
-router.post("/signin", validate(signInUserSchema), signInUser);
-router.post("/signup", validate(createUserSchema), createUser);
+router.post("/signin", validate(signInUserSchema), signInUser)
+router.post("/signup", validate(createUserSchema), createUser)
 
-export default router;
+export default router

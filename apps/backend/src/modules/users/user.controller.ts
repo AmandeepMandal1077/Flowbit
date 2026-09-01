@@ -82,14 +82,10 @@ const signInUser = async (req: Request, res: Response) => {
 
     return res.status(200).json({
         success: true,
-        data: {
-            id: user.id,
-            username: user.username,
-            status: user.status,
-        },
-        message: "Signed-In successfully"
-    });
-};
+        data: user,
+        message: "Signed-In"
+    })
+}
 
 const updateUser = async (req: Request, res: Response) => {
     const userId = req.userId;
@@ -151,4 +147,4 @@ export {
     updateUser,
     deleteUser,
     signInUser,
-};
+};

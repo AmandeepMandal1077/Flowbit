@@ -74,7 +74,7 @@ model WorkflowRun {
   error            Json?
   startedAt        DateTime          @default(now())
   completedAt      DateTime?
-  status           WorkflowRunStatus
+  status           WorkflowRunStatus @default(PENDING)
   workflowId       String
   workflow         Workflow          @relation(fields: [workflowId], references: [id])
   actionExecutions ActionExecution[]
@@ -101,7 +101,6 @@ model Action {
 }
 
 //each action execution unique for each workflowRun (indexing required)
-//created when previous action is completed and pushed to queue
 model ActionExecution {
   id                Int          @id @default(autoincrement())
   status            ActionStatus @default(PENDING)
@@ -138,8 +137,7 @@ model AvailableTrigger {
 model outbox {
   id                Int         @id @default(autoincrement())
   retryAttemptCount Int         @default(0)
-  idempotentKey     String
-  actionStep        Int
+  actionId          Int
   payload           Json
   workflowRunId     Int         @unique
   workflowRuns      WorkflowRun @relation(fields: [workflowRunId], references: [id])

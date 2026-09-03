@@ -1,0 +1,22 @@
+{
+  "name": "@flowbit/outbox-publisher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "pnpm tsc && node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@flowbit/db": "workspace:*",
+    "dotenv": "^17.4.2",
+    "kafkajs": "^2.2.4"
+  }
+}

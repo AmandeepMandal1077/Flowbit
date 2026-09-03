@@ -9,6 +9,13 @@ services:
       - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
+  kafka:
+    image: apache/kafka:4.1.2
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    ports:
+      - "9092:9092"
 
 volumes:
   pgdata:
+  kafka_data:

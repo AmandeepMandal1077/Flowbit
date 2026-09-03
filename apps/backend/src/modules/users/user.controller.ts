@@ -87,43 +87,7 @@ const signInUser = async (req: Request, res: Response) => {
     })
 }
 
-const updateUser = async (req: Request, res: Response) => {
-    const userId = req.userId;
-    if (!userId) {
-        throw new AppError("Unauthorized", 401);
-    }
-
-    const { username } = req.body;
-
-    if (username) {
-        const existingUser = await prisma.user.findUnique({
-            where: { username }
-        });
-
-        if (existingUser && existingUser.id !== userId) {
-            throw new AppError("Username is already taken", 409);
-        }
-    }
-
-    const user = await prisma.user.update({
-        where: { id: userId },
-        data: {
-            ...(username && { username })
-        },
-        select: {
-            id: true,
-            username: true,
-            status: true,
-            updatedAt: true,
-        }
-    });
-
-    return res.status(200).json({
-        success: true,
-        data: user,
-        message: "User updated successfully"
-    });
-};
+const updateUser = async (req: Request, res: Response) => { }
 
 const deleteUser = async (req: Request, res: Response) => {
     const userId = req.userId;

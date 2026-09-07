@@ -3,7 +3,8 @@ const router: Router = Router();
 
 router.get("/", async (req, res) => {
     res.status(200).json({
-        message: "healthy"
+        message: "healthy",
+        url: "https://edunode-api.amandeepmandal.me/health",
     })
 })
 

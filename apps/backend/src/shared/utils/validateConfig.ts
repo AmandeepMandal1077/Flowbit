@@ -1,11 +1,27 @@
 export type Config = Record<string, unknown>
+export type RequiredConfig = Record<string, {type: unknown, required: Boolean}>
 
-export const validateConfigFields = (requiredConfig: Config, config: Config) => {
+export const validateConfigFields = (requiredConfig: RequiredConfig, config: Config, triggerPayload: Record<string, unknown>): {
+    success: Boolean,
+    missingFields: string[],
+    resolvedFieldValues: Record<string, unknown>,
+} => {
     const requiredConfigKeys = Object.keys(requiredConfig || {});
 
-    // todo: first check if field is required, if yes, than check if it's present or not
-    return requiredConfigKeys.every((key) => {
-        const value = config[key];
-        return value !== undefined && value !== null;
-    });
+    let missingFields = [];
+    let success = true;
+    let resolvedFieldValues: Record<string, unknown> = {};
+
+    for(let key of requiredConfigKeys) {
+
+        const value = config[key] ?? triggerPayload[key];
+        if(requiredConfig[key]!.required === true && (value === undefined || value === null)) {
+            missingFields.push(key);
+            success = false;
+        }
+
+        resolvedFieldValues[key] = value;
+    }
+
+    return {success, missingFields, resolvedFieldValues}
 }

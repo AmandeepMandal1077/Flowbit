@@ -109,12 +109,14 @@ model ActionExecution {
   error             Json?
   retryAttemptCount Int          @default(0)
   startedAt         DateTime     @default(now())
-  lastAttemptedAt   DateTime     @default(now())
+  lastAttemptedAt   DateTime?
   completedAt       DateTime?
   actionId          Int
   action            Action       @relation(fields: [actionId], references: [id])
   workflowRunId     Int
   workflowRun       WorkflowRun  @relation(fields: [workflowRunId], references: [id])
+
+  @@unique([actionId, workflowRunId])
 }
 
 model AvailableAction {

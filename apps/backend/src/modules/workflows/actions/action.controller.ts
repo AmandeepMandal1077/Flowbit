@@ -3,7 +3,7 @@ import { createActionSchema } from "./action.validations.js";
 import { AppError } from "../../../shared/utils/appError.js";
 import { zodErrorMessage } from "../../../shared/utils/zodErrorMessage.js";
 import prisma, { Prisma } from "@flowbit/db";
-import { validateConfigFields, type Config } from "../../../shared/utils/validateConfig.js";
+import { validateConfigFields } from "../../../shared/utils/validateConfig.js";
 
 const createAction = async (req: Request, res: Response) => {
     const workflowId = req.params.workflowId as string;
@@ -39,9 +39,9 @@ const createAction = async (req: Request, res: Response) => {
         throw new AppError("Available action not found", 404);
     }
 
-    const requiredFieldsExist = validateConfigFields(availableAction.metadata as Config, configuration);
+    const { success: configValid } = validateConfigFields(availableAction.metadata as any, configuration, {});
 
-    if (!requiredFieldsExist) {
+    if (!configValid) {
         throw new AppError("Config is incomplete or missing required fields", 400);
     }
 

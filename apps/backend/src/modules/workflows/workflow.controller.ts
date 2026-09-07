@@ -232,46 +232,16 @@ const receiveWebhook = async (req: Request, res: Response) => {
 
     const { inputPayload } = data;
 
-    const workflow = await prisma.workflow.findUnique({
-        where: {
-            id: workflowId
-        },
-        include: {
-            actions: {
-                include: {
-                    type: true,
-                },
-                orderBy: { order: "asc" }
-            }
-        }
-    });
-
-    if (!workflow) {
-        throw new AppError("Workflow not found", 404);
-    }
-
-    if (workflow.status !== WorkflowStatus.ACTIVE) {
-        throw new AppError("Workflow is not active", 400);
-    }
-
-    const actionConfigMetadata = workflow.actions[0]?.type.metadata as Config;
-
-    const isValidConfig = validateConfigFields(actionConfigMetadata, inputPayload);
-    if (!isValidConfig) {
-        throw new AppError("Config is incomplete or missing required fields", 400);
-    }
-
-    const firstActionId = workflow.actions[0]?.id || -1;
-
     const payload: createWorkflowRunPayload = {
-        actionId: firstActionId,
+        actionId: null,
         inputPayload: inputPayload
     };
 
-    await createWorkflowRun(workflowId, payload);
+    const workflowRun = await createWorkflowRun(workflowId, payload);
 
     res.status(201).json({
         success: true,
+        data: workflowRun,
         message: "Workflow run created successfully",
     });
 };

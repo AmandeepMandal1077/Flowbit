@@ -1,0 +1,23 @@
+FROM node:22
+WORKDIR /app
+RUN corepack enable
+
+# --- Dependencies (cached layer) ---
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/db/package.json             packages/db/
+COPY apps/backend/package.json            apps/backend/
+COPY apps/outbox-publisher/package.json   apps/outbox-publisher/
+COPY apps/worker/package.json             apps/worker/
+RUN pnpm install
+
+# --- Build @flowbit/db ---
+COPY packages/db packages/db
+RUN pnpm --filter @flowbit/db exec prisma generate \
+    && pnpm --filter @flowbit/db run build
+
+# --- Build outbox-publisher ---
+COPY apps/outbox-publisher apps/outbox-publisher
+RUN pnpm --filter @flowbit/outbox-publisher run build
+
+WORKDIR /app/apps/outbox-publisher
+CMD ["node", "dist/index.js"]

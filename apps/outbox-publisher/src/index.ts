@@ -3,7 +3,7 @@ import { Kafka } from "kafkajs"
 import "dotenv/config"
 
 const kafka = new Kafka({
-    clientId: "outbox-publisher",
+    clientId: "workflow-action-jobs",
     brokers: [process.env.KAFKA_BROKER_URL || "localhost:9092"]
 })
 
@@ -24,7 +24,8 @@ const run = async () => {
                 select: {
                     workflow: {
                         select: {
-                            userId: true
+                            userId: true,
+                            id: true,
                         }
                     }
                 }

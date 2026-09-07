@@ -1,0 +1,3 @@
+type HttpRequestInput = {
+    url: string
+}
